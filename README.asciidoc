@@ -19,7 +19,7 @@ always, but they will be about smoothing things further.
 
 === Latest released version
 
-+el-get+ version 2.1 is available, with a boatload of features, including
++el-get+ version 3.1 is available, with a boatload of features, including
 autoloads support, byte-compiling in an external "clean room" Emacs
 instance, custom support, lazy initialisation support (defering all init
 functions to +eval-after-load+), and multi repositories +ELPA+ support.
@@ -35,6 +35,11 @@ release.
 Please note that this versioning policy has been picked while backing
 1.2~dev, so 1.0 was a "stable" release in fact.  Ah, history.
 
+In addition to the version, you can also get the exact git revision by
+running M-x +el-get-self-checksum+. You should provide this checksum
+when seeking support or reporting a bug, so that the developers will
+know exactly which version you are using.
+
 == How to Install it?
 
 Here's the 'lazy installer':
@@ -45,7 +50,7 @@ Here's the 'lazy installer':
 (url-retrieve
  "https://raw.github.com/dimitri/el-get/master/el-get-install.el"
  (lambda (s)
-   (end-of-buffer)
+   (goto-char (point-max))
    (eval-print-last-sexp)))
 --------------------------------------
 
@@ -66,14 +71,14 @@ avoid this with the following snippet instead:
   (url-retrieve
    "https://raw.github.com/dimitri/el-get/master/el-get-install.el"
    (lambda (s)
-     (end-of-buffer)
+     (goto-char (point-max))
      (eval-print-last-sexp))))
 --------------------------------------
 
 See next section for details about how to setup you emacs so that it's able
 to benefit from +el-get+ automatically.
 
-== How to install the developer version (master branch)?
+=== How to install the developer version (master branch)?
 
 The 'lazy installer' uses the default +el-get-install.el+ file which targets
 the +2.stable+ branch.  To install el-get directly on the +master+ branch,
@@ -86,7 +91,25 @@ summon the +el-get-master-branch+ variable into existence:
  "https://raw.github.com/dimitri/el-get/master/el-get-install.el"
  (lambda (s)
    (let (el-get-master-branch)
-     (end-of-buffer)
+     (goto-char (point-max))
+     (eval-print-last-sexp))))
+--------------------------------------
+
+=== How to skip fetching the emacswiki recipes at install time?
+
+The installer will fetch from emacswiki all the recipe available there and
+install a local copy of those in your system automatically. Should you want
+to disable that feature, the following snippet is showing how to:
+
+--------------------------------------
+;; So the idea is that you copy/paste this code into your *scratch* buffer,
+;; hit C-j, and you have a working el-get (without emacswiki automatic
+;; recipes).
+(url-retrieve
+ "https://raw.github.com/dimitri/el-get/master/el-get-install.el"
+ (lambda (s)
+   (let (el-get-install-skip-emacswiki-recipes)
+     (goto-char (point-max))
      (eval-print-last-sexp))))
 --------------------------------------
 
@@ -101,11 +124,11 @@ how to:
 (add-to-list 'load-path "~/.emacs.d/el-get/el-get")
 
 (unless (require 'el-get nil t)
-  (url-retrieve
-   "https://raw.github.com/dimitri/el-get/master/el-get-install.el"
-   (lambda (s)
-     (end-of-buffer)
-     (eval-print-last-sexp))))
+  (with-current-buffer
+      (url-retrieve-synchronously
+       "https://raw.github.com/dimitri/el-get/master/el-get-install.el")
+    (goto-char (point-max))
+    (eval-print-last-sexp)))
 
 (el-get 'sync)
 --------------------------------------
@@ -139,7 +162,6 @@ run emacs, and I want this documentation to be usable as-is. Enters el-get!
 						    (require 'asciidoc)))))
 
 	(:name lisppaste        :type elpa)
-        (:name dictionary-el    :type apt-get)
         (:name emacs-goodies-el :type apt-get)))
 
 (setq my-packages
@@ -309,6 +331,10 @@ M-x el-get-update-all::
     updating a package requires some adjustments to your setup.  Updating
     all of them at once will require reviewing almost all your setup.
 
+M-x el-get-reload::
+
+    Reload the given package files.  Happens automatically at update time too.
+
 M-x el-get-remove::
 
     Will prompt for an +installed+ package name, with completion, then
@@ -316,6 +342,12 @@ M-x el-get-remove::
     simply deleting the directory where the source package lies. Sometime we
     have to use external tools instead (+apt-get+, e.g.). No effort is made
     to unload the features.
+
+M-x el-get-reinstall::
+
+    This is just a shortcut for +el-get-remove+ followed by +el-get-install+
+    of the same package. It is primarily useful when a package has changed
+    types, so the normal +el-get-update+ process will not work correctly.
 
 M-x el-get-find-recipe-file::
 
@@ -327,6 +359,13 @@ M-x el-get-make-recipes::
     Will prompt for an existing directory where to output all your 'new'
     recipe files: one file for each entry in +el-get-sources+ that is not
     just a +symbol+ and that is not found anywhere in +el-get-recipe-path+.
+
+M-x el-get-checksum::
+
+    Will prompt for the name of an installed package, with complement, then
+    compute its checksum if the package type supports that feature.  The
+    checksum is added to the kill-ring so that you're ready to yank it into
+    your +el-get-sources+ :checksum property if you want to.
 
 M-x el-get-emacswiki-refresh::
 
@@ -352,7 +391,7 @@ el-get-package-types-alist (statuses &rest types)::
    (rainbow-delimiters . emacswiki)
    (goto-last-change . emacswiki)
    (emacs-goodies-el . cvs))
-  
+
 el-get-extra-packages (&rest packages)::
 
       Return installed or required packages that are not in given package
